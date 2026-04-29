@@ -110,7 +110,7 @@ export const cascadeDelete =
           ...collection,
           hooks: {
             ...collection.hooks,
-            // Append the cascade hook — existing beforeDelete hooks are preserved.
+            // Append the cascade hook; existing beforeDelete hooks are preserved.
             beforeDelete: [
               ...(collection.hooks?.beforeDelete ?? []),
               buildCascadeHook(cascades),

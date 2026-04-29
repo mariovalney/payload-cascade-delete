@@ -1,4 +1,4 @@
-# CLAUDE.md — payload-cascade-delete
+# CLAUDE.md: payload-cascade-delete
 
 Context and guidelines for AI-assisted development on this project.
 
@@ -15,17 +15,21 @@ The core problem it solves: when you delete a parent document in Payload, child 
 ## Domain concepts
 
 ### Parent collection
+
 The collection **being deleted**. When a parent document is removed, children must follow.
 
-Example: `appointments` is the parent — it has no relationship field pointing elsewhere.
+Example: `appointments` is the parent; it has no relationship field pointing elsewhere.
 
 ### Child collection
+
 A collection whose documents hold a **required single relationship** to the parent. When the parent is deleted, all child documents that reference it must also be deleted.
 
-Example: `appointment_slots` is a child — it has a field `{ name: 'appointment', type: 'relationship', relationTo: 'appointments', required: true }`.
+Example: `appointment_slots` is a child; it has a field `{ name: 'appointment', type: 'relationship', relationTo: 'appointments', required: true }`.
 
 ### Cascade entry
-The internal data structure that represents one child→parent relationship:
+
+The internal data structure that represents one child-to-parent relationship:
+
 ```typescript
 type CascadeEntry = {
   collection: string  // child collection slug
@@ -34,13 +38,15 @@ type CascadeEntry = {
 ```
 
 ### Cascade map
+
 Built at startup (config time). Maps each **parent** slug to the list of cascade entries that should be executed when that parent is deleted.
 
 ```
-parentSlug → CascadeEntry[]
+parentSlug -> CascadeEntry[]
 ```
 
 ### Active collection
+
 A collection that the plugin has been configured to scan. Controlled by the `collections` option. Only active collections are scanned for qualifying fields.
 
 ---
@@ -52,7 +58,7 @@ A relationship field on a child collection qualifies for cascade registration **
 | Condition | Reason |
 |---|---|
 | `field.type === 'relationship'` | Must be a relationship field |
-| `field.required === true` | Optional relationships don't imply parent ownership |
+| `field.required === true` | Optional relationships do not imply parent ownership |
 | `field.hasMany !== true` | 1-N relationships are not yet supported (see TODOs) |
 | `!Array.isArray(field.relationTo)` | Polymorphic relationships are not yet supported (see TODOs) |
 
@@ -64,26 +70,26 @@ Only **top-level** fields are scanned. Nested fields inside `group`, `tab`, `arr
 
 ```
 buildConfig() is called
-  └─ Payload validates the incoming config
-  └─ Plugins execute (our plugin runs here)
-       └─ cascadeDelete(options)(incomingConfig)
-            1. Reads collections option to determine which are active
-            2. Iterates active collections, finds qualifying fields
-            3. Builds cascadeMap (parentSlug → CascadeEntry[])
-            4. Maps over ALL collections, injecting beforeDelete hook where cascadeMap has entries
-            5. Returns modified config
-  └─ Payload merges defaults
-  └─ Payload sanitizes and initializes
+  Payload validates the incoming config
+  Plugins execute (our plugin runs here)
+    cascadeDelete(options)(incomingConfig)
+      1. Reads collections option to determine which are active
+      2. Iterates active collections, finds qualifying fields
+      3. Builds cascadeMap (parentSlug -> CascadeEntry[])
+      4. Maps over ALL collections, injecting beforeDelete hook where cascadeMap has entries
+      5. Returns modified config
+  Payload merges defaults
+  Payload sanitizes and initializes
 
 Later, when payload.delete({ collection: 'appointments', id, req }) is called:
-  └─ Payload starts transaction (if not already in one)
-  └─ beforeDelete hooks fire — including the cascade hook injected by this plugin
-       └─ Hook throws if req.transactionID is missing
-       └─ For each CascadeEntry: payload.delete({ collection, where: { [on]: { equals: id } }, req })
-       └─ Throws on any error → Payload rolls back the transaction
-  └─ The parent document is deleted
-  └─ afterDelete hooks fire
-  └─ Transaction commits
+  Payload starts transaction (if not already in one)
+  beforeDelete hooks fire, including the cascade hook injected by this plugin
+    Hook throws if req.transactionID is missing
+    For each CascadeEntry: payload.delete({ collection, where: { [on]: { equals: id } }, req })
+    Throws on any error; Payload rolls back the transaction
+  The parent document is deleted
+  afterDelete hooks fire
+  Transaction commits
 ```
 
 ---
@@ -92,16 +98,16 @@ Later, when payload.delete({ collection: 'appointments', id, req }) is called:
 
 ```
 src/
-  types.ts    — CascadeDeleteOptions (exported for consumers to use in their own type annotations)
-  index.ts    — all plugin logic:
-                  isRelationshipField()         type guard
-                  getRequiredSingleRelationFields()  field filter
-                  buildCascadeHook()            creates the beforeDelete hook closure
-                  cascadeDelete()               the plugin itself (exported)
+  types.ts         CascadeDeleteOptions (exported for consumers to use in their own type annotations)
+  index.ts         all plugin logic:
+                     isRelationshipField()               type guard
+                     getRequiredSingleRelationFields()   field filter
+                     buildCascadeHook()                  creates the beforeDelete hook closure
+                     cascadeDelete()                     the plugin itself (exported)
 
 tests/
-  plugin.test.ts  — pure unit tests, no Payload instance or database required
-                    covers: config transformation + hook behaviour
+  plugin.test.ts   pure unit tests, no Payload instance or database required
+                   covers: config transformation and hook behaviour
 ```
 
 The plugin is intentionally **a single source file** (`src/index.ts`). There is no runtime code beyond the hook itself. Do not split this into multiple files unless the complexity genuinely demands it.
@@ -116,7 +122,7 @@ The relationship field (`relationTo: 'appointments'`) lives on the **child** col
 
 ### Why inject the hook on the parent, not the child?
 
-The cascade delete must run when the **parent** is deleted, before it disappears. That's a `beforeDelete` hook on the parent collection.
+The cascade delete must run when the **parent** is deleted, before it disappears. That is a `beforeDelete` hook on the parent collection.
 
 ### Why one hook per parent (not one per cascade entry)?
 
@@ -128,7 +134,7 @@ A cascade delete that runs without a transaction is dangerous: if child deletes 
 
 ### Why not support hasMany: true?
 
-A `hasMany` relationship on a child document means that document holds **an array of parent references**, not a single one. Deleting all children whose array *contains* the deleted parent ID is logically correct in some cases, but carries a high risk of accidental mass-deletes if the data model is misunderstood. This case requires explicit opt-in design and is left as a TODO.
+A `hasMany` relationship on a child document means that document holds **an array of parent references**, not a single one. Deleting all children whose array contains the deleted parent ID is logically correct in some cases, but carries a high risk of accidental mass-deletes if the data model is misunderstood. This case requires explicit opt-in design and is left as a TODO.
 
 ---
 
@@ -136,9 +142,9 @@ A `hasMany` relationship on a child document means that document holds **an arra
 
 These are tracked in the source with `// TODO:` comments:
 
-1. **`hasMany: true` support** — cascade-delete children that reference the parent in a many-to-many array field. Needs a clear API design to avoid accidental mass-deletes.
-2. **Polymorphic relationship support** (`relationTo: string[]`) — when a child field can reference multiple parent collections, determine how to safely cascade.
-3. **Nested field traversal** — scan fields inside `group`, `tab`, `array`, and `blocks` field types (recursive traversal of the field tree).
+1. **`hasMany: true` support**: cascade-delete children that reference the parent in a many-to-many array field. Needs a clear API design to avoid accidental mass-deletes.
+2. **Polymorphic relationship support** (`relationTo: string[]`): when a child field can reference multiple parent collections, determine how to safely cascade.
+3. **Nested field traversal**: scan fields inside `group`, `tab`, `array`, and `blocks` field types (recursive traversal of the field tree).
 
 When implementing a TODO, write tests first. All existing tests must continue to pass.
 
@@ -154,13 +160,14 @@ Tests are in `tests/plugin.test.ts` using **Vitest**. They are pure unit tests:
 
 Two test categories:
 
-1. **Config transformation** — verify that the plugin produces the correct modified config (hooks injected on correct collections, not on others, existing hooks preserved, etc.)
-2. **Hook behaviour** — extract the injected hook and call it directly with a mocked `req`/`payload`, verifying it calls `payload.delete()` with the right args, throws on missing transaction, and throws on delete errors.
+1. **Config transformation**: verify that the plugin produces the correct modified config (hooks injected on correct collections, not on others, existing hooks preserved, etc.)
+2. **Hook behaviour**: extract the injected hook and call it directly with a mocked `req`/`payload`, verifying it calls `payload.delete()` with the right args, throws on missing transaction, and throws on delete errors.
 
 Helper pattern:
+
 ```typescript
 function getCascadeHook(config, parentSlug) {
-  // returns the last beforeDelete hook — the cascade hook is always appended last
+  // returns the last beforeDelete hook; the cascade hook is always appended last
 }
 ```
 
@@ -169,11 +176,11 @@ function getCascadeHook(config, parentSlug) {
 ## Commands
 
 ```bash
-npm test          # run all tests (vitest run)
+npm test            # run all tests (vitest run)
 npm run test:watch  # watch mode
-npm run lint      # TypeScript type check (tsc --noEmit)
-npm run build     # compile src/ → dist/ (types + JS via SWC)
-npm run clean     # remove dist/
+npm run lint        # TypeScript type check (tsc --noEmit)
+npm run build       # compile src/ to dist/ (types + JS via SWC)
+npm run clean       # remove dist/
 ```
 
 ---
@@ -182,12 +189,13 @@ npm run clean     # remove dist/
 
 The package targets npm as `payload-cascade-delete`.
 
-- `"type": "module"` — ESM only
+- `"type": "module"`: ESM only
 - `"exports"` maps `.` to `dist/index.js` with types
-- `"files": ["dist"]` — only compiled output is published
+- `"files": ["dist"]`: only compiled output is published
 - `prepublishOnly` runs `clean && build` automatically
 
 To publish a new version:
+
 ```bash
 npm version patch   # or minor / major
 npm publish
@@ -202,6 +210,7 @@ npm publish
 | `0.x` | `^3.0.0` |
 
 When Payload releases a major version, check for breaking changes in:
+
 - `CollectionBeforeDeleteHook` signature
 - `payload.delete()` return type (specifically `errors`)
 - `req.transactionID` availability

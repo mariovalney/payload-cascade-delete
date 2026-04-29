@@ -38,7 +38,7 @@ function getCascadeHook(config: Config, parentSlug: string): CollectionBeforeDel
 // Config transformation tests
 // ---------------------------------------------------------------------------
 
-describe('cascadeDelete plugin — config transformation', () => {
+describe('cascadeDelete plugin: config transformation', () => {
   it('returns config unchanged when cascadeMap is empty', () => {
     const config = makeConfig({
       collections: [{ slug: 'posts', fields: [{ name: 'title', type: 'text' }] }],
@@ -81,7 +81,7 @@ describe('cascadeDelete plugin — config transformation', () => {
               name: 'author',
               type: 'relationship',
               relationTo: 'authors',
-              // required omitted — optional relationship
+              // required omitted; this is an optional relationship
             },
           ],
         },
@@ -270,7 +270,7 @@ describe('cascadeDelete plugin — config transformation', () => {
 // Hook behaviour tests
 // ---------------------------------------------------------------------------
 
-describe('cascadeDelete plugin — hook behaviour', () => {
+describe('cascadeDelete plugin: hook behaviour', () => {
   it('throws when req.transactionID is missing', async () => {
     const config = makeConfig({
       collections: [

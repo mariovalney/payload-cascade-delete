@@ -1,6 +1,9 @@
-# payload-cascade-delete
+# [Draft] Payload Cascade Delete
 
-A [Payload CMS v3](https://payloadcms.com) plugin that implements **lifecycle-safe cascade deletes** driven by your collection relationship fields — no database-level rules, no bypassed hooks.
+> **This document is an AI-generated draft and the plugin is currently in alpha.**
+> The content has not yet been reviewed by a human and may contain inaccuracies or incomplete information. It will be revised as soon as possible.
+
+A [Payload CMS v3](https://payloadcms.com) plugin that implements **lifecycle-safe cascade deletes** driven by your collection relationship fields, with no database-level rules and no bypassed hooks.
 
 ## Table of contents
 
@@ -31,7 +34,7 @@ Database-level cascade rules (`ON DELETE CASCADE`) delete child rows **directly 
 | Audit logs / activity feeds | No record that child documents were removed |
 | Other plugins that hook into deletes | They are never notified |
 
-`payload-cascade-delete` fixes this by inspecting your relationship fields at startup and injecting `beforeDelete` hooks so every delete flows through Payload's normal lifecycle — inside a transaction, with rollback on any failure.
+`payload-cascade-delete` fixes this by inspecting your relationship fields at startup and injecting `beforeDelete` hooks so every delete flows through Payload's normal lifecycle, inside a transaction, with rollback on any failure.
 
 ---
 
@@ -53,7 +56,7 @@ yarn add payload-cascade-delete
 pnpm add payload-cascade-delete
 ```
 
-`payload` itself is a peer dependency — it is **not** bundled with this plugin.
+`payload` itself is a peer dependency and is **not** bundled with this plugin.
 
 ---
 
@@ -80,8 +83,8 @@ Or target only specific collections:
 ```typescript
 cascadeDelete({
   collections: {
-    appointment_slots: true,   // ← watched
-    audit_logs: false,         // ← ignored (same as omitting)
+    appointment_slots: true,   // watched
+    audit_logs: false,         // ignored (same as omitting)
   },
 }),
 ```
@@ -92,22 +95,22 @@ cascadeDelete({
 
 ### At startup (config time)
 
-The plugin reads your Payload config and, for every **active** collection, looks for fields that satisfy **all three** of:
+The plugin reads your Payload config and, for every **active** collection, looks for fields that satisfy **all** of:
 
 1. `type: "relationship"`
 2. `required: true`
 3. `hasMany` is **not** `true`
 4. `relationTo` is a **single** collection slug (not an array)
 
-For each such field the child collection "registers" a cascade against the parent collection named in `relationTo`. The plugin then injects a single `beforeDelete` hook into every parent that has at least one registered cascade.
+For each such field the child collection registers a cascade against the parent collection named in `relationTo`. The plugin then injects a single `beforeDelete` hook into every parent that has at least one registered cascade.
 
 ### At delete time
 
 When a parent document is deleted through Payload (REST, GraphQL, Local API, or Admin UI), the injected hook runs **before** the document is removed:
 
-1. Checks that `req.transactionID` is set — aborts with an error if missing.
+1. Checks that `req.transactionID` is set. Aborts with an error if it is missing.
 2. For each registered child collection, calls `payload.delete()` with a `where` filter that matches the parent's ID on the relationship field name.
-3. If any child delete returns errors, throws immediately — Payload's transaction layer rolls back all changes automatically.
+3. If any child delete returns errors, throws immediately so Payload's transaction layer rolls back all changes automatically.
 
 ---
 
@@ -169,10 +172,10 @@ export const AppointmentSlots: CollectionConfig = {
   slug: 'appointment_slots',
   fields: [
     {
-      name: 'appointment',       // ← used as the where-filter key
+      name: 'appointment',       // used as the where-filter key
       type: 'relationship',
       relationTo: 'appointments',
-      required: true,            // ← required = cascade is registered
+      required: true,            // required = cascade is registered
     },
     { name: 'startTime', type: 'date', required: true },
     { name: 'endTime',   type: 'date', required: true },
@@ -215,7 +218,7 @@ type CascadeDeleteOptions = {
    * Which collections to observe for cascade delete.
    *
    * - `true`: observe all collections.
-   * - Record: map of collection slug → `true` to enable, `false`/omitted to skip.
+   * - Record: map of collection slug to `true` to enable, `false` or omitted to skip.
    */
   collections: true | Partial<Record<string, boolean>>
 }
@@ -237,7 +240,6 @@ To fix this, ensure you start a transaction before calling delete:
 
 ```typescript
 const req = await createLocalReq({}, payload)
-await payload.db.beginTransaction()
 req.transactionID = await payload.db.beginTransaction()
 
 await payload.delete({ collection: 'appointments', id, req })
@@ -249,15 +251,15 @@ await payload.delete({ collection: 'appointments', id, req })
 
 ## Limitations & roadmap
 
-### `hasMany: true` (1-N) — not yet supported
+### `hasMany: true` (1-N): not yet supported
 
 When a relationship field uses `hasMany: true`, a single child document can reference **multiple** parents. Cascade-deleting on this kind of field could unintentionally delete documents that are still referenced by other parents. This case needs extra design and is tracked as a TODO in the source.
 
-### Polymorphic relationships (`relationTo: string[]`) — not yet supported
+### Polymorphic relationships (`relationTo: string[]`): not yet supported
 
 When `relationTo` is an array, the parent could be any one of several collections. The cascade direction is ambiguous and is not yet handled.
 
-### Nested fields — not yet supported
+### Nested fields: not yet supported
 
 Fields inside `group`, `tab`, `array`, or `blocks` are not currently scanned. Only top-level fields on a collection are considered.
 
@@ -268,11 +270,11 @@ Fields inside `group`, `tab`, `array`, or `blocks` are not currently scanned. On
 The plugin **appends** its hook to any `beforeDelete` hooks already defined on the collection. It never overwrites or reorders existing hooks.
 
 ```typescript
-// Both hooks will run — existing first, cascade second
+// Both hooks will run: existing first, cascade second
 {
   slug: 'appointments',
   hooks: {
-    beforeDelete: [yourExistingHook],  // ← preserved
+    beforeDelete: [yourExistingHook],  // preserved
   },
 }
 ```
@@ -292,7 +294,7 @@ npm run lint      # type check
 npm run build     # compile to dist/
 ```
 
-Tests live in `tests/plugin.test.ts` and use [Vitest](https://vitest.dev). They are pure unit tests — no database or running Payload instance is required.
+Tests live in `tests/plugin.test.ts` and use [Vitest](https://vitest.dev). They are pure unit tests with no database or running Payload instance required.
 
 ---
 
