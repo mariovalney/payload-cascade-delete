@@ -1,7 +1,7 @@
 # [Draft] Payload Cascade Delete
 
-> **This document is an AI-generated draft and the plugin is currently in alpha.**
-> The content has not yet been reviewed by a human and may contain inaccuracies or incomplete information. It will be revised as soon as possible.
+> **This plugin is an AI-generated draft.**
+> The content / code has not yet been reviewed by a human and may contain inaccuracies or incomplete features / information and bugs.
 
 A [Payload CMS v3](https://payloadcms.com) plugin that implements **lifecycle-safe cascade deletes** driven by your collection relationship fields, with no database-level rules and no bypassed hooks.
 
